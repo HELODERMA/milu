@@ -10,6 +10,7 @@
     #barcode { margin: 24px auto; }
     .row { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
     button { padding: 10px 18px; font-size: 16px; cursor: pointer; }
+    select { padding: 8px 10px; font-size: 15px; }
     .status { margin-top: 10px; color: #444; font-size: 14px; }
     .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #f2f2f2; margin: 2px 6px; font-size: 13px; }
     textarea { width: 95%; max-width: 760px; height: 120px; margin-top: 12px; font-family: monospace; }
@@ -23,9 +24,23 @@
 
   <svg id="barcode"></svg>
 
+  <!-- Controles de navegación -->
   <div class="row">
     <button id="btnPrev" onclick="anterior()" disabled>Anterior</button>
-    <button id="btnNext" onclick="siguiente()">Siguiente</button>
+    <button id="btnNext" onclick="siguiente()">Siguiente (+1)</button>
+
+    <select id="stepSelect" onchange="cambiarPaso()">
+      <option value="1" selected>Paso: 1</option>
+      <option value="3">Paso: 3</option>
+      <option value="8">Paso: 8</option>
+      <option value="16">Paso: 16</option>
+      <option value="32">Paso: 32</option>
+      <option value="64">Paso: 64</option>
+    </select>
+
+    <button id="btnJumpBack" onclick="retrocederPaso()">Retroceder (−Paso)</button>
+    <button id="btnJump" onclick="avanzarPaso()">Avanzar (+Paso)</button>
+
     <button id="btnSave" onclick="guardarActual()">Guardar</button>
     <button id="btnDownload" onclick="downloadTxt()">Descargar guardados</button>
   </div>
@@ -34,6 +49,7 @@
   <div class="status">
     <span class="pill">Guardados: <b id="savedCount">0</b></span>
     <span class="pill">Posición actual: <b id="posInfo">1</b></span>
+    <span class="pill">Paso actual: <b id="stepInfo">1</b></span>
   </div>
 
   <h3>Códigos guardados</h3>
@@ -48,8 +64,9 @@
     // Estado
     let indexActual = 0; // 0-based; INICIO + indexActual = código actual
     let ultimoCodigo = '';
+    let paso = 1;
     const guardados = [];
-    const guardadosSet = new Set(); // para evitar duplicados de forma eficiente
+    const guardadosSet = new Set(); // para evitar duplicados
 
     // Render del código de barras
     function renderCodigo() {
@@ -69,13 +86,18 @@
       document.getElementById('info').textContent =
         `Mostrando: ${codigo} (${indexActual + 1} de ${TOTAL})`;
       document.getElementById('posInfo').textContent = (indexActual + 1).toString();
+      document.getElementById('stepInfo').textContent = String(paso);
 
       // Habilitar/Deshabilitar navegación en extremos
       document.getElementById('btnPrev').disabled = indexActual <= 0;
       document.getElementById('btnNext').disabled = indexActual >= (TOTAL - 1);
+
+      // Deshabilitar saltos si estamos en límites con el paso actual
+      document.getElementById('btnJumpBack').disabled = indexActual - paso < 0;
+      document.getElementById('btnJump').disabled = indexActual + paso > (TOTAL - 1);
     }
 
-    // Navegación
+    // Navegación básica (+1 / -1)
     function siguiente() {
       if (indexActual < TOTAL - 1) {
         indexActual++;
@@ -92,10 +114,36 @@
       }
     }
 
-    // Validación simple (si la quieres ajustar, hazlo aquí)
+    // Cambiar paso (3, 8, 16, 32, 64)
+    function cambiarPaso() {
+      const sel = document.getElementById('stepSelect');
+      paso = parseInt(sel.value, 10) || 1;
+      renderCodigo();
+    }
+
+    // Saltos por paso (clamp para no salir del rango)
+    function avanzarPaso() {
+      if (indexActual + paso > TOTAL - 1) {
+        indexActual = TOTAL - 1;
+      } else {
+        indexActual += paso;
+      }
+      renderCodigo();
+    }
+
+    function retrocederPaso() {
+      if (indexActual - paso < 0) {
+        indexActual = 0;
+      } else {
+        indexActual -= paso;
+      }
+      renderCodigo();
+    }
+
+    // Validación simple del código
     function esValido(code) {
-      // Aquí puedes añadir más reglas si lo requieres
-      return /^\d+$/.test(code) && Number(code) >= INICIO && Number(code) <= FIN;
+      const n = Number(code);
+      return Number.isInteger(n) && n >= INICIO && n <= FIN;
     }
 
     // Guardar el código actual si es válido (sin duplicados)
