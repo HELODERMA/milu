@@ -1,199 +1,247 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Generador de Barcode</title>
-  <script src="https://unpkg.com/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-  <style>
-    body { font-family: Arial, Helvetica, sans-serif; text-align: center; padding: 28px; }
-    h2 { margin-bottom: 8px; }
-    #barcode { margin: 24px auto; }
-    .row { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-    button { padding: 10px 18px; font-size: 16px; cursor: pointer; }
-    select { padding: 8px 10px; font-size: 15px; }
-    .status { margin-top: 10px; color: #444; font-size: 14px; }
-    .pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #f2f2f2; margin: 2px 6px; font-size: 13px; }
-    textarea { width: 95%; max-width: 760px; height: 120px; margin-top: 12px; font-family: monospace; }
-    .muted { color: #777; }
-  </style>
+<meta charset="UTF-8">
+<title>Barcode Generator</title>
+
+<script src="https://unpkg.com/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+
+body{
+font-family:Arial,Helvetica,sans-serif;
+text-align:center;
+background:#f5f5f5;
+padding:20px;
+}
+
+h2{
+margin-bottom:5px;
+}
+
+#barcode{
+margin-top:25px;
+background:white;
+padding:15px;
+border-radius:10px;
+}
+
+.controls{
+display:flex;
+justify-content:center;
+gap:15px;
+margin-top:25px;
+flex-wrap:wrap;
+}
+
+.btn{
+width:75px;
+height:75px;
+border:none;
+border-radius:16px;
+background:#222;
+color:white;
+display:flex;
+align-items:center;
+justify-content:center;
+cursor:pointer;
+}
+
+.btn svg{
+width:34px;
+height:34px;
+}
+
+.btn:active{
+transform:scale(0.92);
+}
+
+.save{
+background:#2e7d32;
+}
+
+.download{
+background:#1565c0;
+}
+
+.status{
+margin-top:10px;
+font-size:14px;
+}
+
+textarea{
+width:95%;
+max-width:700px;
+height:120px;
+margin-top:15px;
+font-family:monospace;
+}
+
+</style>
+
 </head>
+
 <body>
 
-  <h2>Generador de Barcode</h2>
-  <div class="muted">Rango: <b>1378648</b> a <b>4321502</b></div>
+<h2>Barcode Generator</h2>
+<div>Rango: <b>1378648</b> a <b>4321502</b></div>
 
-  <svg id="barcode"></svg>
+<svg id="barcode"></svg>
 
-  <!-- Controles de navegación -->
-  <div class="row">
-    <button id="btnPrev" onclick="anterior()" disabled>Anterior</button>
-    <button id="btnNext" onclick="siguiente()">Siguiente (+1)</button>
+<div class="controls">
 
-    <select id="stepSelect" onchange="cambiarPaso()">
-      <option value="1" selected>Paso: 1</option>
-      <option value="3">Paso: 3</option>
-      <option value="8">Paso: 8</option>
-      <option value="16">Paso: 16</option>
-      <option value="32">Paso: 32</option>
-      <option value="64">Paso: 64</option>
-    </select>
+<button onclick="anterior()" class="btn">
+<i data-lucide="minus"></i>
+</button>
 
-    <button id="btnJumpBack" onclick="retrocederPaso()">Retroceder (−Paso)</button>
-    <button id="btnJump" onclick="avanzarPaso()">Avanzar (+Paso)</button>
+<button onclick="siguiente()" class="btn">
+<i data-lucide="plus"></i>
+</button>
 
-    <button id="btnSave" onclick="guardarActual()">Guardar</button>
-    <button id="btnDownload" onclick="downloadTxt()">Descargar guardados</button>
-  </div>
+<button onclick="guardarActual()" class="btn save">
+<i data-lucide="bookmark"></i>
+</button>
 
-  <div class="status" id="info"></div>
-  <div class="status">
-    <span class="pill">Guardados: <b id="savedCount">0</b></span>
-    <span class="pill">Posición actual: <b id="posInfo">1</b></span>
-    <span class="pill">Paso actual: <b id="stepInfo">1</b></span>
-  </div>
+<button onclick="downloadTxt()" class="btn download">
+<i data-lucide="download"></i>
+</button>
 
-  <h3>Códigos guardados</h3>
-  <textarea id="validosBox" readonly placeholder="Aquí verás los códigos guardados..."></textarea>
+</div>
 
-  <script>
-    // --- Parámetros del rango ---
-    const INICIO = 1378648;
-    const FIN = 4321502;
-    const TOTAL = (FIN - INICIO) + 1;
+<div class="status" id="info"></div>
 
-    // Estado
-    let indexActual = 0; // 0-based; INICIO + indexActual = código actual
-    let ultimoCodigo = '';
-    let paso = 1;
-    const guardados = [];
-    const guardadosSet = new Set(); // para evitar duplicados
+<div class="status">
+Guardados: <b id="savedCount">0</b>
+</div>
 
-    // Render del código de barras
-    function renderCodigo() {
-      const codigo = (INICIO + indexActual).toString();
-      ultimoCodigo = codigo;
+<h3>Códigos guardados</h3>
 
-      JsBarcode("#barcode", codigo, {
-        format: "CODE128",
-        width: 3,
-        height: 120,
-        displayValue: true,
-        fontSize: 24,
-        margin: 20
-      });
+<textarea id="validosBox" readonly></textarea>
 
-      // Estado visual
-      document.getElementById('info').textContent =
-        `Mostrando: ${codigo} (${indexActual + 1} de ${TOTAL})`;
-      document.getElementById('posInfo').textContent = (indexActual + 1).toString();
-      document.getElementById('stepInfo').textContent = String(paso);
+<script>
 
-      // Habilitar/Deshabilitar navegación en extremos
-      document.getElementById('btnPrev').disabled = indexActual <= 0;
-      document.getElementById('btnNext').disabled = indexActual >= (TOTAL - 1);
+const INICIO=1378648
+const FIN=4321502
+const TOTAL=(FIN-INICIO)+1
 
-      // Deshabilitar saltos si estamos en límites con el paso actual
-      document.getElementById('btnJumpBack').disabled = indexActual - paso < 0;
-      document.getElementById('btnJump').disabled = indexActual + paso > (TOTAL - 1);
-    }
+let indexActual=0
+let ultimoCodigo=''
+let guardados=[]
+let guardadosSet=new Set()
 
-    // Navegación básica (+1 / -1)
-    function siguiente() {
-      if (indexActual < TOTAL - 1) {
-        indexActual++;
-        renderCodigo();
-      } else {
-        alert("Has llegado al final del rango.");
-      }
-    }
+function renderCodigo(){
 
-    function anterior() {
-      if (indexActual > 0) {
-        indexActual--;
-        renderCodigo();
-      }
-    }
+const codigo=(INICIO+indexActual).toString()
+ultimoCodigo=codigo
 
-    // Cambiar paso (3, 8, 16, 32, 64)
-    function cambiarPaso() {
-      const sel = document.getElementById('stepSelect');
-      paso = parseInt(sel.value, 10) || 1;
-      renderCodigo();
-    }
+JsBarcode("#barcode",codigo,{
+format:"CODE128",
+width:4,
+height:150,
+displayValue:true,
+fontSize:28,
+margin:20
+})
 
-    // Saltos por paso (clamp para no salir del rango)
-    function avanzarPaso() {
-      if (indexActual + paso > TOTAL - 1) {
-        indexActual = TOTAL - 1;
-      } else {
-        indexActual += paso;
-      }
-      renderCodigo();
-    }
+document.getElementById("info").textContent=
+`Mostrando ${codigo} (${indexActual+1} de ${TOTAL})`
 
-    function retrocederPaso() {
-      if (indexActual - paso < 0) {
-        indexActual = 0;
-      } else {
-        indexActual -= paso;
-      }
-      renderCodigo();
-    }
+}
 
-    // Validación simple del código
-    function esValido(code) {
-      const n = Number(code);
-      return Number.isInteger(n) && n >= INICIO && n <= FIN;
-    }
+function siguiente(){
 
-    // Guardar el código actual si es válido (sin duplicados)
-    function guardarActual() {
-      if (!ultimoCodigo) {
-        alert("No hay un código generado aún.");
-        return;
-      }
-      if (!esValido(ultimoCodigo)) {
-        alert(`El código ${ultimoCodigo} no es válido.`);
-        return;
-      }
-      if (guardadosSet.has(ultimoCodigo)) {
-        alert(`El código ${ultimoCodigo} ya fue guardado.`);
-        return;
-      }
-      guardados.push(ultimoCodigo);
-      guardadosSet.add(ultimoCodigo);
-      renderGuardados();
-    }
+if(indexActual<TOTAL-1){
+indexActual++
+renderCodigo()
+}else{
+alert("Fin del rango")
+}
 
-    function renderGuardados() {
-      const box = document.getElementById('validosBox');
-      box.value = guardados.join('\n');
-      document.getElementById('savedCount').textContent = guardados.length.toString();
-    }
+}
 
-    // Descargar solo los guardados
-    function downloadTxt() {
-      if (guardados.length === 0) {
-        alert("No hay códigos guardados para descargar.");
-        return;
-      }
-      const contenido = guardados.join('\n') + '\n';
-      const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const fecha = new Date().toISOString().replace(/[:.]/g, '-');
-      a.href = url;
-      a.download = `codigos_guardados_${fecha}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
+function anterior(){
 
-    // Inicialización
-    window.onload = function() {
-      renderCodigo();
-    };
-  </script>
+if(indexActual>0){
+indexActual--
+renderCodigo()
+}
+
+}
+
+function guardarActual(){
+
+if(guardadosSet.has(ultimoCodigo))return
+
+guardados.push(ultimoCodigo)
+guardadosSet.add(ultimoCodigo)
+
+renderGuardados()
+
+}
+
+function renderGuardados(){
+
+document.getElementById("validosBox").value=guardados.join("\n")
+document.getElementById("savedCount").textContent=guardados.length
+
+}
+
+function downloadTxt(){
+
+if(guardados.length==0){
+alert("No hay códigos guardados")
+return
+}
+
+const contenido=guardados.join("\n")
+
+const blob=new Blob([contenido],{type:"text/plain"})
+
+const url=URL.createObjectURL(blob)
+
+const a=document.createElement("a")
+
+a.href=url
+a.download="codigos_guardados.txt"
+
+document.body.appendChild(a)
+
+a.click()
+
+document.body.removeChild(a)
+
+URL.revokeObjectURL(url)
+
+}
+
+renderCodigo()
+
+lucide.createIcons()
+
+/* swipe gestures */
+
+let startX=0
+
+document.addEventListener("touchstart",(e)=>{
+startX=e.changedTouches[0].screenX
+})
+
+document.addEventListener("touchend",(e)=>{
+
+let endX=e.changedTouches[0].screenX
+
+if(endX-startX>50){
+anterior()
+}
+
+if(startX-endX>50){
+siguiente()
+}
+
+})
+
+</script>
+
 </body>
 </html>
