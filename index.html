@@ -16,10 +16,6 @@ background:#f5f5f5;
 padding:20px;
 }
 
-h2{
-margin-bottom:5px;
-}
-
 #barcode{
 margin-top:25px;
 background:white;
@@ -30,44 +26,43 @@ border-radius:10px;
 .controls{
 display:flex;
 justify-content:center;
-gap:15px;
-margin-top:25px;
+gap:12px;
 flex-wrap:wrap;
+margin-top:20px;
 }
 
 .btn{
-width:75px;
-height:75px;
+width:70px;
+height:70px;
 border:none;
-border-radius:16px;
+border-radius:14px;
 background:#222;
 color:white;
 display:flex;
 align-items:center;
 justify-content:center;
-cursor:pointer;
 }
 
 .btn svg{
-width:34px;
-height:34px;
+width:30px;
+height:30px;
 }
 
 .btn:active{
-transform:scale(0.92);
+transform:scale(0.9);
 }
 
-.save{
-background:#2e7d32;
+.save{background:#2e7d32;}
+.download{background:#1565c0;}
+
+.stepbox{
+margin-top:15px;
+font-size:16px;
 }
 
-.download{
-background:#1565c0;
-}
-
-.status{
-margin-top:10px;
-font-size:14px;
+select{
+padding:8px;
+font-size:16px;
 }
 
 textarea{
@@ -78,18 +73,36 @@ margin-top:15px;
 font-family:monospace;
 }
 
-</style>
+.status{
+margin-top:10px;
+}
 
+</style>
 </head>
 
 <body>
 
 <h2>Barcode Generator</h2>
-<div>Rango: <b>1378648</b> a <b>4321502</b></div>
 
 <svg id="barcode"></svg>
 
+<div class="stepbox">
+Paso:
+<select id="stepSelect" onchange="cambiarPaso()">
+<option value="1">1</option>
+<option value="3">3</option>
+<option value="8">8</option>
+<option value="16">16</option>
+<option value="32">32</option>
+<option value="64">64</option>
+</select>
+</div>
+
 <div class="controls">
+
+<button onclick="retrocederPaso()" class="btn">
+<i data-lucide="rewind"></i>
+</button>
 
 <button onclick="anterior()" class="btn">
 <i data-lucide="minus"></i>
@@ -97,6 +110,10 @@ font-family:monospace;
 
 <button onclick="siguiente()" class="btn">
 <i data-lucide="plus"></i>
+</button>
+
+<button onclick="avanzarPaso()" class="btn">
+<i data-lucide="fast-forward"></i>
 </button>
 
 <button onclick="guardarActual()" class="btn save">
@@ -126,6 +143,8 @@ const FIN=4321502
 const TOTAL=(FIN-INICIO)+1
 
 let indexActual=0
+let paso=1
+
 let ultimoCodigo=''
 let guardados=[]
 let guardadosSet=new Set()
@@ -150,22 +169,44 @@ document.getElementById("info").textContent=
 }
 
 function siguiente(){
-
 if(indexActual<TOTAL-1){
 indexActual++
 renderCodigo()
-}else{
-alert("Fin del rango")
 }
-
 }
 
 function anterior(){
-
 if(indexActual>0){
 indexActual--
 renderCodigo()
 }
+}
+
+function avanzarPaso(){
+
+indexActual=indexActual+paso
+
+if(indexActual>=TOTAL)
+indexActual=TOTAL-1
+
+renderCodigo()
+
+}
+
+function retrocederPaso(){
+
+indexActual=indexActual-paso
+
+if(indexActual<0)
+indexActual=0
+
+renderCodigo()
+
+}
+
+function cambiarPaso(){
+
+paso=parseInt(document.getElementById("stepSelect").value)
 
 }
 
@@ -194,19 +235,14 @@ alert("No hay códigos guardados")
 return
 }
 
-const contenido=guardados.join("\n")
-
-const blob=new Blob([contenido],{type:"text/plain"})
-
+const blob=new Blob([guardados.join("\n")],{type:"text/plain"})
 const url=URL.createObjectURL(blob)
 
 const a=document.createElement("a")
-
 a.href=url
 a.download="codigos_guardados.txt"
 
 document.body.appendChild(a)
-
 a.click()
 
 document.body.removeChild(a)
@@ -231,13 +267,8 @@ document.addEventListener("touchend",(e)=>{
 
 let endX=e.changedTouches[0].screenX
 
-if(endX-startX>50){
-anterior()
-}
-
-if(startX-endX>50){
-siguiente()
-}
+if(endX-startX>60) anterior()
+if(startX-endX>60) siguiente()
 
 })
 
