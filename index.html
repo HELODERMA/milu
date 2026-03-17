@@ -26,16 +26,16 @@ border-radius:10px;
 .controls{
 display:flex;
 justify-content:center;
-gap:12px;
+gap:14px;
 flex-wrap:wrap;
-margin-top:20px;
+margin-top:25px;
 }
 
 .btn{
-width:70px;
-height:70px;
+width:80px;
+height:80px;
 border:none;
-border-radius:14px;
+border-radius:16px;
 background:#222;
 color:white;
 display:flex;
@@ -44,8 +44,8 @@ justify-content:center;
 }
 
 .btn svg{
-width:30px;
-height:30px;
+width:36px;
+height:36px;
 }
 
 .btn:active{
@@ -56,12 +56,12 @@ transform:scale(0.9);
 .download{background:#1565c0;}
 
 .stepbox{
-margin-top:15px;
-font-size:16px;
+margin-top:18px;
+font-size:18px;
 }
 
 select{
-padding:8px;
+padding:10px;
 font-size:16px;
 }
 
@@ -75,6 +75,7 @@ font-family:monospace;
 
 .status{
 margin-top:10px;
+font-size:14px;
 }
 
 </style>
@@ -83,6 +84,8 @@ margin-top:10px;
 <body>
 
 <h2>Barcode Generator</h2>
+
+<div>Rango válido: <b>1378648</b> a <b>4321502</b></div>
 
 <svg id="barcode"></svg>
 
@@ -102,14 +105,6 @@ Paso:
 
 <button onclick="retrocederPaso()" class="btn">
 <i data-lucide="rewind"></i>
-</button>
-
-<button onclick="anterior()" class="btn">
-<i data-lucide="minus"></i>
-</button>
-
-<button onclick="siguiente()" class="btn">
-<i data-lucide="plus"></i>
 </button>
 
 <button onclick="avanzarPaso()" class="btn">
@@ -140,9 +135,8 @@ Guardados: <b id="savedCount">0</b>
 
 const INICIO=1378648
 const FIN=4321502
-const TOTAL=(FIN-INICIO)+1
 
-let indexActual=0
+let codigoActual=INICIO
 let paso=1
 
 let ultimoCodigo=''
@@ -151,10 +145,9 @@ let guardadosSet=new Set()
 
 function renderCodigo(){
 
-const codigo=(INICIO+indexActual).toString()
-ultimoCodigo=codigo
+ultimoCodigo=codigoActual.toString()
 
-JsBarcode("#barcode",codigo,{
+JsBarcode("#barcode",ultimoCodigo,{
 format:"CODE128",
 width:4,
 height:150,
@@ -163,43 +156,29 @@ fontSize:28,
 margin:20
 })
 
+let estado=""
+
+if(codigoActual>=INICIO && codigoActual<=FIN){
+estado="(Dentro del rango)"
+}else{
+estado="(Fuera del rango)"
+}
+
 document.getElementById("info").textContent=
-`Mostrando ${codigo} (${indexActual+1} de ${TOTAL})`
+`Mostrando ${codigoActual} ${estado}`
 
-}
-
-function siguiente(){
-if(indexActual<TOTAL-1){
-indexActual++
-renderCodigo()
-}
-}
-
-function anterior(){
-if(indexActual>0){
-indexActual--
-renderCodigo()
-}
 }
 
 function avanzarPaso(){
 
-indexActual=indexActual+paso
-
-if(indexActual>=TOTAL)
-indexActual=TOTAL-1
-
+codigoActual+=paso
 renderCodigo()
 
 }
 
 function retrocederPaso(){
 
-indexActual=indexActual-paso
-
-if(indexActual<0)
-indexActual=0
-
+codigoActual-=paso
 renderCodigo()
 
 }
@@ -210,7 +189,20 @@ paso=parseInt(document.getElementById("stepSelect").value)
 
 }
 
+function esValido(code){
+
+const n=Number(code)
+
+return n>=INICIO && n<=FIN
+
+}
+
 function guardarActual(){
+
+if(!esValido(ultimoCodigo)){
+alert("Código fuera del rango válido")
+return
+}
 
 if(guardadosSet.has(ultimoCodigo))return
 
@@ -254,23 +246,6 @@ URL.revokeObjectURL(url)
 renderCodigo()
 
 lucide.createIcons()
-
-/* swipe gestures */
-
-let startX=0
-
-document.addEventListener("touchstart",(e)=>{
-startX=e.changedTouches[0].screenX
-})
-
-document.addEventListener("touchend",(e)=>{
-
-let endX=e.changedTouches[0].screenX
-
-if(endX-startX>60) anterior()
-if(startX-endX>60) siguiente()
-
-})
 
 </script>
 
